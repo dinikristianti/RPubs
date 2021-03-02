@@ -1,0 +1,1049 @@
+---
+title: "Data transformation"
+author: "Prof. Dr. Suhartono, M. Kom @ Dini Kristianti, S. Kom"
+date: "23 Februari 2021"
+output: html_document
+---
+Dalam bab ini kita akan fokus pada bagaimana menggunakan paket dplyr, anggota inti lain dari tidyverse. Kami akan mengilustrasikan ide utama menggunakan data dari paket nycflights13, dan menggunakan ggplot2 untuk membantu kami memahami datanya.
+berikut library yang harus di install
+```{r}
+library(nycflights13)
+library(tidyverse)
+```
+nycflights13
+Untuk menjelajahi kata kerja manipulasi data dasar dari dplyr, kita akan menggunakan nycflights13
+```{r}
+flights
+#> # A tibble: 336,776 x 19
+#>    year month   day dep_time sched_dep_time dep_delay arr_time sched_arr_time
+#>   <int> <int> <int>    <int>          <int>     <dbl>    <int>          <int>
+#> 1  2013     1     1      517            515         2      830            819
+#> 2  2013     1     1      533            529         4      850            830
+#> 3  2013     1     1      542            540         2      923            850
+#> 4  2013     1     1      544            545        -1     1004           1022
+#> 5  2013     1     1      554            600        -6      812            837
+#> 6  2013     1     1      554            558        -4      740            728
+#> # . with 336,770 more rows, and 11 more variables: arr_delay <dbl>,
+#> #   carrier <chr>, flight <int>, tailnum <chr>, origin <chr>, dest <chr>,
+#> #   air_time <dbl>, distance <dbl>, hour <dbl>, minute <dbl>, time_hour <dttm>
+```
+Filter baris dengan filter ()
+filter () memungkinkan Anda untuk membuat subset pengamatan berdasarkan nilainya. Argumen pertama adalah nama bingkai data. Argumen kedua dan selanjutnya adalah ekspresi yang memfilter bingkai data. Misalnya, kami dapat memilih semua penerbangan pada tanggal 1 Januari dengan:
+```{r}
+filter(flights, month == 1, day == 1)
+#> # A tibble: 842 x 19
+#>    year month   day dep_time sched_dep_time dep_delay arr_time sched_arr_time
+#>   <int> <int> <int>    <int>          <int>     <dbl>    <int>          <int>
+#> 1  2013     1     1      517            515         2      830            819
+#> 2  2013     1     1      533            529         4      850            830
+#> 3  2013     1     1      542            540         2      923            850
+#> 4  2013     1     1      544            545        -1     1004           1022
+#> 5  2013     1     1      554            600        -6      812            837
+#> 6  2013     1     1      554            558        -4      740            728
+#> # . with 836 more rows, and 11 more variables: arr_delay <dbl>, carrier <chr>,
+#> #   flight <int>, tailnum <chr>, origin <chr>, dest <chr>, air_time <dbl>,
+#> #   distance <dbl>, hour <dbl>, minute <dbl>, time_hour <dttm>
+```
+Fungsi dplyr tidak pernah mengubah masukannya, jadi jika Anda ingin menyimpan hasilnya, Anda harus menggunakan operator penugasan, <-:
+```{r}
+jan1 <- filter(flights, month == 1, day == 1)
+```
+R baik mencetak hasil, atau menyimpannya ke variabel. Jika Anda ingin melakukan keduanya, maka scriptnya
+```{r}
+(dec25 <- filter(flights, month == 12, day == 25))
+#> # A tibble: 719 x 19
+#>    year month   day dep_time sched_dep_time dep_delay arr_time sched_arr_time
+#>   <int> <int> <int>    <int>          <int>     <dbl>    <int>          <int>
+#> 1  2013    12    25      456            500        -4      649            651
+#> 2  2013    12    25      524            515         9      805            814
+#> 3  2013    12    25      542            540         2      832            850
+#> 4  2013    12    25      546            550        -4     1022           1027
+#> 5  2013    12    25      556            600        -4      730            745
+#> 6  2013    12    25      557            600        -3      743            752
+#> # . with 713 more rows, and 11 more variables: arr_delay <dbl>, carrier <chr>,
+#> #   flight <int>, tailnum <chr>, origin <chr>, dest <chr>, air_time <dbl>,
+#> #   distance <dbl>, hour <dbl>, minute <dbl>, time_hour <dttm>
+```
+Perbandingan
+Untuk menggunakan pemfilteran secara efektif
+#```{r}
+filter(flights, month = 1)
+#> Error: Problem with `filter()` input `..1`.
+#> ??? Input `..1` is named.
+#> ??? This usually means that you've used `=` instead of `==`.
+#> ??? Did you mean `month == 1`?
+#```
+nahh dari eror di atas kita bisa tahu, bahwa operataor = (sama dengan) saja tidak bisa di gunakan, maka dari itu harus menggunakan operator perbandingan yang di sediakan oleh R. R menyediakan suite standar:>,> =, <, <=,! = (Tidak sama), dan == (sama).
+
+Ada masalah umum lainnya yang mungkin Anda temui saat menggunakan ==: bilangan floating point.
+```{r}
+sqrt(2) ^ 2 == 2
+#> [1] FALSE
+1 / 49 * 49 == 1
+#> [1] FALSE
+```
+```{r}
+near(sqrt(2) ^ 2,  2)
+#> [1] TRUE
+near(1 / 49 * 49, 1)
+#> [1] TRUE
+```
+Operator logika
+Beberapa argumen untuk difilter () digabungkan dengan "dan".
+Anda harus menggunakan operator Boolean sendiri: & is "dan", | adalah "atau", dan! tidak"
+
+Kode berikut menemukan semua penerbangan yang berangkat pada bulan November atau Desember:
+```{r}
+filter(flights, month == 11 | month == 12)
+```
+Cara singkat yang berguna untuk masalah ini adalah x% dalam% y. Ini akan memilih setiap baris di mana x adalah salah satu nilai di y. Berikut kodenya :
+```{r}
+nov_dec <- filter(flights, month %in% c(11, 12))
+```
+
+Terkadang Anda dapat menyederhanakan subset yang rumit dengan mengingat hukum De Morgan:! (X & y) sama dengan! X | ! y, dan! (x | y) sama dengan! x &! y. Misalnya, jika Anda ingin menemukan penerbangan yang tidak tertunda (pada saat kedatangan atau keberangkatan) lebih dari dua jam, Anda dapat menggunakan salah satu dari dua filter berikut:
+```{r}
+filter(flights, !(arr_delay > 120 | dep_delay > 120))
+filter(flights, arr_delay <= 120, dep_delay <= 120)
+```
+Nilai yang hilang
+Salah satu fitur penting dari R yang dapat membuat perbandingan menjadi rumit adalah nilai yang hilang, atau NAs ("tidak tersedia"). NA mewakili nilai yang tidak diketahui sehingga nilai yang hilang bersifat "menular":
+```{r}
+NA > 5
+#> [1] NA
+10 == NA
+#> [1] NA
+NA + 10
+#> [1] NA
+NA / 2
+#> [1] NA
+```
+
+Hasil yang paling membingungkan adalah yang ini:
+```{r}
+NA == NA
+#> [1] NA
+```
+
+Paling mudah untuk memahami mengapa ini benar dengan sedikit lebih banyak konteks:
+```{r}
+# Let x be Mary's age. We don't know how old she is.
+x <- NA
+
+# Let y be John's age. We don't know how old he is.
+y <- NA
+
+# Are John and Mary the same age?
+x == y
+#> [1] NA
+# We don't know!
+```
+
+Jika Anda ingin menentukan apakah suatu nilai hilang, gunakan is.na ():
+```{r}
+is.na(x)
+#> [1] TRUE
+```
+
+filter () hanya menyertakan baris yang kondisinya BENAR; itu mengecualikan nilai FALSE dan NA. Jika Anda ingin mempertahankan nilai yang hilang, tanyakan secara eksplisit:
+
+```{r}
+df <- tibble(x = c(1, NA, 3))
+filter(df, x > 1)
+#> # A tibble: 1 x 1
+#>       x
+#>   <dbl>
+#> 1     3
+filter(df, is.na(x) | x > 1)
+#> # A tibble: 2 x 1
+#>       x
+#>   <dbl>
+#> 1    NA
+#> 2     3
+```
+Susun baris dengan mengatur ()
+mengatur () bekerja mirip dengan filter () kecuali bahwa alih-alih memilih baris, itu mengubah urutannya. Dibutuhkan bingkai data dan sekumpulan nama kolom (atau ekspresi yang lebih rumit) untuk diurutkan. Jika Anda memberikan lebih dari satu nama kolom, setiap kolom tambahan akan digunakan untuk memutuskan hubungan dalam nilai kolom sebelumnya:
+```{r}
+arrange(flights, year, month, day)
+#> # A tibble: 336,776 x 19
+#>    year month   day dep_time sched_dep_time dep_delay arr_time sched_arr_time
+#>   <int> <int> <int>    <int>          <int>     <dbl>    <int>          <int>
+#> 1  2013     1     1      517            515         2      830            819
+#> 2  2013     1     1      533            529         4      850            830
+#> 3  2013     1     1      542            540         2      923            850
+#> 4  2013     1     1      544            545        -1     1004           1022
+#> 5  2013     1     1      554            600        -6      812            837
+#> 6  2013     1     1      554            558        -4      740            728
+#> # . with 336,770 more rows, and 11 more variables: arr_delay <dbl>,
+#> #   carrier <chr>, flight <int>, tailnum <chr>, origin <chr>, dest <chr>,
+#> #   air_time <dbl>, distance <dbl>, hour <dbl>, minute <dbl>, time_hour <dttm>
+```
+Gunakan desc () untuk mengurutkan ulang menurut kolom dalam urutan menurun:
+
+```{r}
+arrange(flights, desc(dep_delay))
+#> # A tibble: 336,776 x 19
+#>    year month   day dep_time sched_dep_time dep_delay arr_time sched_arr_time
+#>   <int> <int> <int>    <int>          <int>     <dbl>    <int>          <int>
+#> 1  2013     1     9      641            900      1301     1242           1530
+#> 2  2013     6    15     1432           1935      1137     1607           2120
+#> 3  2013     1    10     1121           1635      1126     1239           1810
+#> 4  2013     9    20     1139           1845      1014     1457           2210
+#> 5  2013     7    22      845           1600      1005     1044           1815
+#> 6  2013     4    10     1100           1900       960     1342           2211
+#> # . with 336,770 more rows, and 11 more variables: arr_delay <dbl>,
+#> #   carrier <chr>, flight <int>, tailnum <chr>, origin <chr>, dest <chr>,
+#> #   air_time <dbl>, distance <dbl>, hour <dbl>, minute <dbl>, time_hour <dttm>
+```
+Nilai yang hilang selalu diurutkan di bagian akhir:
+
+```{r}
+df <- tibble(x = c(5, 2, NA))
+arrange(df, x)
+#> # A tibble: 3 x 1
+#>       x
+#>   <dbl>
+#> 1     2
+#> 2     5
+#> 3    NA
+arrange(df, desc(x))
+#> # A tibble: 3 x 1
+#>       x
+#>   <dbl>
+#> 1     5
+#> 2     2
+#> 3    NA
+```
+
+Memilih kolom ()
+```{r}
+# Select columns by name
+select(flights, year, month, day)
+#> # A tibble: 336,776 x 3
+#>    year month   day
+#>   <int> <int> <int>
+#> 1  2013     1     1
+#> 2  2013     1     1
+#> 3  2013     1     1
+#> 4  2013     1     1
+#> 5  2013     1     1
+#> 6  2013     1     1
+#> # . with 336,770 more rows
+# Select all columns between year and day (inclusive)
+select(flights, year:day)
+#> # A tibble: 336,776 x 3
+#>    year month   day
+#>   <int> <int> <int>
+#> 1  2013     1     1
+#> 2  2013     1     1
+#> 3  2013     1     1
+#> 4  2013     1     1
+#> 5  2013     1     1
+#> 6  2013     1     1
+#> # . with 336,770 more rows
+# Select all columns except those from year to day (inclusive)
+select(flights, -(year:day))
+#> # A tibble: 336,776 x 16
+#>   dep_time sched_dep_time dep_delay arr_time sched_arr_time arr_delay carrier
+#>      <int>          <int>     <dbl>    <int>          <int>     <dbl> <chr>  
+#> 1      517            515         2      830            819        11 UA     
+#> 2      533            529         4      850            830        20 UA     
+#> 3      542            540         2      923            850        33 AA     
+#> 4      544            545        -1     1004           1022       -18 B6     
+#> 5      554            600        -6      812            837       -25 DL     
+#> 6      554            558        -4      740            728        12 UA     
+#> # . with 336,770 more rows, and 9 more variables: flight <int>, tailnum <chr>,
+#> #   origin <chr>, dest <chr>, air_time <dbl>, distance <dbl>, hour <dbl>,
+#> #   minute <dbl>, time_hour <dttm>
+```
+select () dapat digunakan untuk mengganti nama variabel,Sebagai gantinya, gunakan rename (), yang merupakan varian dari select () yang menyimpan semua variabel yang tidak disebutkan secara eksplisit:
+
+```{r}
+rename(flights, tail_num = tailnum)
+#> # A tibble: 336,776 x 19
+#>    year month   day dep_time sched_dep_time dep_delay arr_time sched_arr_time
+#>   <int> <int> <int>    <int>          <int>     <dbl>    <int>          <int>
+#> 1  2013     1     1      517            515         2      830            819
+#> 2  2013     1     1      533            529         4      850            830
+#> 3  2013     1     1      542            540         2      923            850
+#> 4  2013     1     1      544            545        -1     1004           1022
+#> 5  2013     1     1      554            600        -6      812            837
+#> 6  2013     1     1      554            558        -4      740            728
+#> # . with 336,770 more rows, and 11 more variables: arr_delay <dbl>,
+#> #   carrier <chr>, flight <int>, tail_num <chr>, origin <chr>, dest <chr>,
+#> #   air_time <dbl>, distance <dbl>, hour <dbl>, minute <dbl>, time_hour <dttm>
+```
+
+Opsi lainnya adalah menggunakan select () bersama dengan helper everything (). Ini berguna jika Anda memiliki beberapa variabel yang ingin Anda pindahkan ke awal bingkai data.
+
+```{r}
+select(flights, time_hour, air_time, everything())
+#> # A tibble: 336,776 x 19
+#>   time_hour           air_time  year month   day dep_time sched_dep_time
+#>   <dttm>                 <dbl> <int> <int> <int>    <int>          <int>
+#> 1 2013-01-01 05:00:00      227  2013     1     1      517            515
+#> 2 2013-01-01 05:00:00      227  2013     1     1      533            529
+#> 3 2013-01-01 05:00:00      160  2013     1     1      542            540
+#> 4 2013-01-01 05:00:00      183  2013     1     1      544            545
+#> 5 2013-01-01 06:00:00      116  2013     1     1      554            600
+#> 6 2013-01-01 05:00:00      150  2013     1     1      554            558
+#> # . with 336,770 more rows, and 12 more variables: dep_delay <dbl>,
+#> #   arr_time <int>, sched_arr_time <int>, arr_delay <dbl>, carrier <chr>,
+#> #   flight <int>, tailnum <chr>, origin <chr>, dest <chr>, distance <dbl>,
+#> #   hour <dbl>, minute <dbl>
+```
+Latihan
+1. Brainstorming sebanyak mungkin cara untuk memilih dep_time, dep_delay, arr_time, dan arr_delay dari penerbangan.
+
+2. Apa yang terjadi jika Anda menyertakan nama variabel beberapa kali dalam panggilan select ()?
+
+3. Apa yang dilakukan fungsi any_of ()? Mengapa mungkin berguna sehubungan dengan vektor ini?
+
+4. Apakah hasil dari menjalankan kode berikut mengejutkan Anda? Bagaimana pembantu terpilih menangani kasus secara default? Bagaimana Anda bisa mengubah default itu?
+
+Answer 
+
+3
+```{r}
+vars <- c("year", "month", "day", "dep_delay", "arr_delay")
+```
+
+4
+
+```{r}
+select(flights, contains("TIME"))
+```
+
+Tambahkan variabel baru dengan mutate ()
+Selain memilih kumpulan kolom yang ada, sering kali berguna untuk menambahkan kolom baru yang merupakan fungsi dari kolom yang ada. Itulah tugas mutate ().
+
+mutate () selalu menambahkan kolom baru di akhir kumpulan data Anda, jadi kita akan mulai dengan membuat kumpulan data yang lebih sempit sehingga kita dapat melihat variabel baru. Ingatlah bahwa saat Anda berada di RStudio, cara termudah untuk melihat semua kolom adalah View ().
+
+```{r}
+flights_sml <- select(flights, 
+  year:day, 
+  ends_with("delay"), 
+  distance, 
+  air_time
+)
+mutate(flights_sml,
+  gain = dep_delay - arr_delay,
+  speed = distance / air_time * 60
+)
+#> # A tibble: 336,776 x 9
+#>    year month   day dep_delay arr_delay distance air_time  gain speed
+#>   <int> <int> <int>     <dbl>     <dbl>    <dbl>    <dbl> <dbl> <dbl>
+#> 1  2013     1     1         2        11     1400      227    -9  370.
+#> 2  2013     1     1         4        20     1416      227   -16  374.
+#> 3  2013     1     1         2        33     1089      160   -31  408.
+#> 4  2013     1     1        -1       -18     1576      183    17  517.
+#> 5  2013     1     1        -6       -25      762      116    19  394.
+#> 6  2013     1     1        -4        12      719      150   -16  288.
+#> # . with 336,770 more rows
+```
+Perhatikan bahwa Anda dapat merujuk ke kolom yang baru saja Anda buat:
+
+```{r}
+mutate(flights_sml,
+  gain = dep_delay - arr_delay,
+  hours = air_time / 60,
+  gain_per_hour = gain / hours
+)
+#> # A tibble: 336,776 x 10
+#>    year month   day dep_delay arr_delay distance air_time  gain hours
+#>   <int> <int> <int>     <dbl>     <dbl>    <dbl>    <dbl> <dbl> <dbl>
+#> 1  2013     1     1         2        11     1400      227    -9  3.78
+#> 2  2013     1     1         4        20     1416      227   -16  3.78
+#> 3  2013     1     1         2        33     1089      160   -31  2.67
+#> 4  2013     1     1        -1       -18     1576      183    17  3.05
+#> 5  2013     1     1        -6       -25      762      116    19  1.93
+#> 6  2013     1     1        -4        12      719      150   -16  2.5 
+#> # . with 336,770 more rows, and 1 more variable: gain_per_hour <dbl>
+```
+
+Jika Anda hanya ingin menyimpan variabel baru, gunakan transmute ():
+```{r}
+transmute(flights,
+  gain = dep_delay - arr_delay,
+  hours = air_time / 60,
+  gain_per_hour = gain / hours
+)
+#> # A tibble: 336,776 x 3
+#>    gain hours gain_per_hour
+#>   <dbl> <dbl>         <dbl>
+#> 1    -9  3.78         -2.38
+#> 2   -16  3.78         -4.23
+#> 3   -31  2.67        -11.6 
+#> 4    17  3.05          5.57
+#> 5    19  1.93          9.83
+#> 6   -16  2.5          -6.4 
+#> # . with 336,770 more rows
+```
+
+Fungsi kreasi yang berguna
+Ada banyak fungsi untuk membuat variabel baru yang bisa Anda gunakan dengan mutate (). Properti kuncinya adalah bahwa fungsi tersebut harus vektorisasi: ia harus mengambil vektor nilai sebagai masukan, mengembalikan vektor dengan jumlah nilai yang sama sebagai keluaran. Tidak ada cara untuk membuat daftar setiap kemungkinan fungsi yang mungkin Anda gunakan, tapi berikut adalah beberapa fungsi yang sering berguna:
+
+1. Operator aritmatika: +, -, *, /, ^. Contoh :air_time / 60, hours * 60 + minute, dll.
+2. Operator aritmatika juga berguna dalam hubungannya dengan fungsi agregat yang akan Anda pelajari nanti. Misalnya, x / jumlah (x) menghitung proporsi dari total, dan y - mean (y) menghitung selisih dari mean.
+3. Aritmatika modular:% /% (pembagian integer) dan %% (sisa), di mana x == y * (x% /% y) + (x %% y). Aritmatika modular adalah alat praktis karena memungkinkan Anda memecah bilangan bulat menjadi beberapa bagian. Misalnya, dalam kumpulan data penerbangan, Anda dapat menghitung jam dan menit dari dep_time dengan:
+
+```{r}
+transmute(flights,
+  dep_time,
+  hour = dep_time %/% 100,
+  minute = dep_time %% 100
+)
+#> # A tibble: 336,776 x 3
+#>   dep_time  hour minute
+#>      <int> <dbl>  <dbl>
+#> 1      517     5     17
+#> 2      533     5     33
+#> 3      542     5     42
+#> 4      544     5     44
+#> 5      554     5     54
+#> 6      554     5     54
+#> # . with 336,770 more rows
+```
+1. Log: log (), log2 (), log10 ().
+```{r}
+(x <- 1:10)
+#>  [1]  1  2  3  4  5  6  7  8  9 10
+lag(x)
+#>  [1] NA  1  2  3  4  5  6  7  8  9
+lead(x)
+#>  [1]  2  3  4  5  6  7  8  9 10 NA
+```
+Agregat kumulatif dan bergulir: 
+R menyediakan fungsi untuk menjalankan jumlah, produk, menit dan maksimal: cumsum (), cumprod (), cummin (), cummax (); dan dplyr menyediakan cummean () untuk sarana kumulatif. Jika Anda membutuhkan agregat bergulir (yaitu jumlah yang dihitung melalui jendela bergulir), coba paket RcppRoll.
+
+```{r}
+x
+#>  [1]  1  2  3  4  5  6  7  8  9 10
+cumsum(x)
+#>  [1]  1  3  6 10 15 21 28 36 45 55
+cummean(x)
+#>  [1] 1.0 1.5 2.0 2.5 3.0 3.5 4.0 4.5 5.0 5.5
+```
+
+Perbandingan logis, <, <=,>,> =,! =, Dan ==, 
+Peringat: ada sejumlah fungsi pemeringkatan, tetapi Anda harus mulai dengan min_rank (). Itu melakukan jenis peringkat yang paling umum (mis. 1, 2, 2, 4). Defaultnya memberikan nilai terkecil dari rank kecil; gunakan desc (x) untuk memberikan nilai terbesar pangkat terkecil.
+
+```{r}
+y <- c(1, 2, 2, NA, 3, 4)
+min_rank(y)
+#> [1]  1  2  2 NA  4  5
+min_rank(desc(y))
+#> [1]  5  3  3 NA  2  1
+```
+
+Jika min_rank () tidak melakukan apa yang Anda butuhkan, lihat varian row_number (), dense_rank (), percent_rank (), cume_dist (), ntile (). 
+
+```{r}
+row_number(y)
+#> [1]  1  2  3 NA  4  5
+dense_rank(y)
+#> [1]  1  2  2 NA  3  4
+percent_rank(y)
+#> [1] 0.00 0.25 0.25   NA 0.75 1.00
+cume_dist(y)
+#> [1] 0.2 0.6 0.6  NA 0.8 1.0
+```
+Latihan
+1. Saat ini dep_time dan sched_dep_time nyaman untuk dilihat, tetapi sulit untuk dihitung karena keduanya bukan angka yang kontinu. Ubahlah menjadi representasi jumlah menit yang lebih nyaman sejak tengah malam.
+
+
+
+2. Bandingkan air_time dengan arr_time - dep_time. Apa yang ingin Anda lihat?  Apa yang kamu lihat? Apa yang perlu Anda lakukan untuk memperbaikinya?
+
+3. Bandingkan dep_time, sched_dep_time, dan dep_delay. Bagaimana Anda mengharapkan ketiga angka itu terkait?
+
+
+
+4. Temukan 10 penerbangan paling tertunda menggunakan fungsi peringkat. Bagaimana Anda ingin menangani ikatan? Baca dengan cermat dokumentasi untuk min_rank ().
+
+```{r}
+flights %>% 
+  drop_na() %>% 
+  summarise(rata2_delay = mean(dep_delay))
+```
+
+
+
+5. Apa yang dihasilkan 1: 3 + 1:10? Mengapa?
+```{r}
+a=c(1);b=c(3);d=c(10)
+a%/%b
+a%/%d
+```
+
+
+6. Apa fungsi trigonometri yang disediakan R?
+ya di sediakan dan fungsi trigonometri yang ditampilkan seperti sin,cos, tan, dll.
+```{r}
+cos(x) # cos x
+sin(x) # Sin x
+tan(x) # Tan x
+acos(x) # arc-cos x
+asin(x) # arc-sin x
+atan(x) #arc-tan x
+```
+Contoh rumusnya 
+```{r}
+cos(pi)
+```
+
+Ringkasan yang dikelompokkan dengan summarize ()
+Kata kerja kunci terakhir adalah summarize (). Ini meruntuhkan bingkai data menjadi satu baris:
+
+```{r}
+summarise(flights, delay = mean(dep_delay, na.rm = TRUE))
+#> # A tibble: 1 x 1
+#>   delay
+#>   <dbl>
+#> 1  12.6
+```
+
+(Kita akan kembali ke arti na.rm = TRUE itu sebentar lagi.)
+
+summarize () tidak terlalu berguna kecuali kita memasangkannya dengan group_by (). Ini mengubah unit analisis dari kumpulan data lengkap menjadi kelompok individu. Kemudian, saat Anda menggunakan kata kerja dplyr pada bingkai data yang dikelompokkan, kata kerja tersebut akan otomatis diterapkan "menurut grup". Misalnya, jika kami menerapkan kode yang persis sama ke bingkai data yang dikelompokkan berdasarkan tanggal, kami mendapatkan penundaan rata-rata per tanggal:
+
+```{r}
+by_day <- group_by(flights, year, month, day)
+summarise(by_day, delay = mean(dep_delay, na.rm = TRUE))
+#> `summarise()` regrouping output by 'year', 'month' (override with `.groups` argument)
+#> # A tibble: 365 x 4
+#> # Groups:   year, month [12]
+#>    year month   day delay
+#>   <int> <int> <int> <dbl>
+#> 1  2013     1     1 11.5 
+#> 2  2013     1     2 13.9 
+#> 3  2013     1     3 11.0 
+#> 4  2013     1     4  8.95
+#> 5  2013     1     5  5.73
+#> 6  2013     1     6  7.15
+#> # . with 359 more rows
+```
+Menggabungkan beberapa operasi dengan pipe
+
+```{r}
+by_dest <- group_by(flights, dest)
+delay <- summarise(by_dest,
+  count = n(),
+  dist = mean(distance, na.rm = TRUE),
+  delay = mean(arr_delay, na.rm = TRUE)
+)
+#> `summarise()` ungrouping output (override with `.groups` argument)
+delay <- filter(delay, count > 20, dest != "HNL")
+
+# It looks like delays increase with distance up to ~750 miles 
+# and then decrease. Maybe as flights get longer there's more 
+# ability to make up delays in the air?
+ggplot(data = delay, mapping = aes(x = dist, y = delay)) +
+  geom_point(aes(size = count), alpha = 1/3) +
+  geom_smooth(se = FALSE)
+#> `geom_smooth()` using method = 'loess' and formula 'y ~ x'
+```
+Ada cara lain untuk mengatasi masalah yang sama dengan pipe,%>%:
+```{r}
+delays <- flights %>% 
+  group_by(dest) %>% 
+  summarise(
+    count = n(),
+    dist = mean(distance, na.rm = TRUE),
+    delay = mean(arr_delay, na.rm = TRUE)
+  ) %>% 
+  filter(count > 20, dest != "HNL")
+#> `summarise()` ungrouping output (override with `.groups` argument)
+```
+Nilai yang hilang
+Anda mungkin bertanya-tanya tentang argumen na.rm yang kami gunakan di atas. Apa yang terjadi jika kita tidak menyetelnya?
+```{r}
+flights %>% 
+  group_by(year, month, day) %>% 
+  summarise(mean = mean(dep_delay))
+#> `summarise()` regrouping output by 'year', 'month' (override with `.groups` argument)
+#> # A tibble: 365 x 4
+#> # Groups:   year, month [12]
+#>    year month   day  mean
+#>   <int> <int> <int> <dbl>
+#> 1  2013     1     1    NA
+#> 2  2013     1     2    NA
+#> 3  2013     1     3    NA
+#> 4  2013     1     4    NA
+#> 5  2013     1     5    NA
+#> 6  2013     1     6    NA
+#> # . with 359 more rows
+```
+
+jika ada nilai yang hilang dalam masukan, keluarannya adalah nilai yang hilang. Untungnya, semua fungsi agregasi memiliki argumen na.rm yang menghapus nilai yang hilang sebelum komputasi:
+```{r}
+flights %>% 
+  group_by(year, month, day) %>% 
+  summarise(mean = mean(dep_delay, na.rm = TRUE))
+#> `summarise()` regrouping output by 'year', 'month' (override with `.groups` argument)
+#> # A tibble: 365 x 4
+#> # Groups:   year, month [12]
+#>    year month   day  mean
+#>   <int> <int> <int> <dbl>
+#> 1  2013     1     1 11.5 
+#> 2  2013     1     2 13.9 
+#> 3  2013     1     3 11.0 
+#> 4  2013     1     4  8.95
+#> 5  2013     1     5  5.73
+#> 6  2013     1     6  7.15
+#> # . with 359 more rows
+```
+
+Dalam kasus ini, di mana nilai yang hilang mewakili penerbangan yang dibatalkan, kami juga dapat mengatasi masalah tersebut dengan terlebih dahulu menghapus penerbangan yang dibatalkan.
+
+```{r}
+not_cancelled <- flights %>% 
+  filter(!is.na(dep_delay), !is.na(arr_delay))
+
+not_cancelled %>% 
+  group_by(year, month, day) %>% 
+  summarise(mean = mean(dep_delay))
+#> `summarise()` regrouping output by 'year', 'month' (override with `.groups` argument)
+#> # A tibble: 365 x 4
+#> # Groups:   year, month [12]
+#>    year month   day  mean
+#>   <int> <int> <int> <dbl>
+#> 1  2013     1     1 11.4 
+#> 2  2013     1     2 13.7 
+#> 3  2013     1     3 10.9 
+#> 4  2013     1     4  8.97
+#> 5  2013     1     5  5.73
+#> 6  2013     1     6  7.15
+#> # . with 359 more rows
+```
+Hitungan (Count)
+Kapan pun Anda melakukan agregasi, sebaiknya sertakan hitungan (n ()), atau hitungan nilai yang tidak hilang (jumlah (! Is.na (x))). Dengan begitu, Anda dapat memastikan bahwa Anda tidak menarik kesimpulan berdasarkan data yang sangat sedikit. Misalnya, mari kita lihat pesawat (diidentifikasi dengan nomor ekornya) yang memiliki penundaan rata-rata tertinggi:
+
+```{r}
+delays <- not_cancelled %>% 
+  group_by(tailnum) %>% 
+  summarise(
+    delay = mean(arr_delay)
+  )
+#> `summarise()` ungrouping output (override with `.groups` argument)
+
+ggplot(data = delays, mapping = aes(x = delay)) + 
+  geom_freqpoly(binwidth = 10)
+```
+
+Jika ada beberapa pesawat yang rata-rata delay 5 jam (300 menit)!
+```{r}
+delays <- not_cancelled %>% 
+  group_by(tailnum) %>% 
+  summarise(
+    delay = mean(arr_delay, na.rm = TRUE),
+    n = n()
+  )
+#> `summarise()` ungrouping output (override with `.groups` argument)
+
+ggplot(data = delays, mapping = aes(x = n, y = delay)) + 
+  geom_point(alpha = 1/10)
+```
+
+Tidak mengherankan, ada variasi yang jauh lebih besar dalam penundaan rata-rata bila hanya ada sedikit penerbangan. Bentuk plot ini sangat khas: setiap kali Anda memplot mean (atau ringkasan lainnya) vs. ukuran grup, Anda akan melihat bahwa variasinya menurun seiring bertambahnya ukuran sampel.
+```{r}
+delays %>% 
+  filter(n > 25) %>% 
+  ggplot(mapping = aes(x = n, y = delay)) + 
+    geom_point(alpha = 1/10)
+```
+```{r}
+# Convert to a tibble so it prints nicely
+batting <- as_tibble(Lahman::Batting)
+
+batters <- batting %>% 
+  group_by(playerID) %>% 
+  summarise(
+    ba = sum(H, na.rm = TRUE) / sum(AB, na.rm = TRUE),
+    ab = sum(AB, na.rm = TRUE)
+  )
+#> `summarise()` ungrouping output (override with `.groups` argument)
+
+batters %>% 
+  filter(ab > 100) %>% 
+  ggplot(mapping = aes(x = ab, y = ba)) +
+    geom_point() + 
+    geom_smooth(se = FALSE)
+#> `geom_smooth()` using method = 'gam' and formula 'y ~ s(x, bs = "cs")'
+```
+```{r}
+batters %>% 
+  arrange(desc(ba))
+#> # A tibble: 19,689 x 3
+#>   playerID     ba    ab
+#>   <chr>     <dbl> <int>
+#> 1 abramge01     1     1
+#> 2 alanirj01     1     1
+#> 3 alberan01     1     1
+#> 4 banisje01     1     1
+#> 5 bartocl01     1     1
+#> 6 bassdo01      1     1
+#> # . with 19,683 more rows
+```
+
+Fungsi ringkasan yang berguna
+Hanya menggunakan cara, hitungan, dan penjumlahan bisa sangat membantu Anda, tetapi R menyediakan banyak fungsi ringkasan berguna lainnya:
+
+Pengukuran lokasi: kami telah menggunakan mean (x), tetapi median (x) juga berguna. Rata-rata adalah jumlah dibagi panjang; median adalah nilai di mana 50% dari x berada di atasnya, dan 50% di bawahnya.
+
+Terkadang berguna untuk menggabungkan agregasi dengan subset logis. Kami belum membicarakan subset semacam ini, tetapi Anda akan mempelajarinya lebih lanjut di subset.
+
+```{r}
+not_cancelled %>% 
+  group_by(year, month, day) %>% 
+  summarise(
+    avg_delay1 = mean(arr_delay),
+    avg_delay2 = mean(arr_delay[arr_delay > 0]) # the average positive delay
+  )
+#> `summarise()` regrouping output by 'year', 'month' (override with `.groups` argument)
+#> # A tibble: 365 x 5
+#> # Groups:   year, month [12]
+#>    year month   day avg_delay1 avg_delay2
+#>   <int> <int> <int>      <dbl>      <dbl>
+#> 1  2013     1     1      12.7        32.5
+#> 2  2013     1     2      12.7        32.0
+#> 3  2013     1     3       5.73       27.7
+#> 4  2013     1     4      -1.93       28.3
+#> 5  2013     1     5      -1.53       22.6
+#> 6  2013     1     6       4.24       24.4
+#> # . with 359 more rows
+```
+
+Ukuran penyebaran: sd (x), IQR (x), mad (x). Deviasi kuadrat rata-rata akar, atau deviasi standar sd (x), adalah ukuran standar penyebaran. Rentang interkuartil IQR (x) dan deviasi absolut median mad (x) 
+
+```{r}
+# Why is distance to some destinations more variable than to others?
+not_cancelled %>% 
+  group_by(dest) %>% 
+  summarise(distance_sd = sd(distance)) %>% 
+  arrange(desc(distance_sd))
+#> `summarise()` ungrouping output (override with `.groups` argument)
+#> # A tibble: 104 x 2
+#>   dest  distance_sd
+#>   <chr>       <dbl>
+#> 1 EGE         10.5 
+#> 2 SAN         10.4 
+#> 3 SFO         10.2 
+#> 4 HNL         10.0 
+#> 5 SEA          9.98
+#> 6 LAS          9.91
+#> # . with 98 more rows
+```
+
+Ukuran peringkat: min (x), kuantil (x, 0.25), max (x). Kuantil adalah generalisasi dari median. Misalnya, kuantil (x, 0,25) akan menemukan nilai x yang lebih besar dari 25% nilai, dan kurang dari 75% sisanya.
+
+```{r}
+# When do the first and last flights leave each day?
+not_cancelled %>% 
+  group_by(year, month, day) %>% 
+  summarise(
+    first = min(dep_time),
+    last = max(dep_time)
+  )
+#> `summarise()` regrouping output by 'year', 'month' (override with `.groups` argument)
+#> # A tibble: 365 x 5
+#> # Groups:   year, month [12]
+#>    year month   day first  last
+#>   <int> <int> <int> <int> <int>
+#> 1  2013     1     1   517  2356
+#> 2  2013     1     2    42  2354
+#> 3  2013     1     3    32  2349
+#> 4  2013     1     4    25  2358
+#> 5  2013     1     5    14  2357
+#> 6  2013     1     6    16  2355
+#> # . with 359 more rows
+```
+
+Ukuran posisi: pertama (x), n (x, 2), terakhir (x). Ini bekerja mirip dengan x [1], x [2], dan x [length (x)] tetapi membiarkan Anda menetapkan nilai default jika posisi itu tidak ada (yaitu Anda mencoba untuk mendapatkan elemen ke-3 dari grup yang hanya memiliki dua elemen). Misalnya, kita dapat menemukan keberangkatan pertama dan terakhir untuk setiap hari:
+
+```{r}
+not_cancelled %>% 
+  group_by(year, month, day) %>% 
+  summarise(
+    first_dep = first(dep_time), 
+    last_dep = last(dep_time)
+  )
+#> `summarise()` regrouping output by 'year', 'month' (override with `.groups` argument)
+#> # A tibble: 365 x 5
+#> # Groups:   year, month [12]
+#>    year month   day first_dep last_dep
+#>   <int> <int> <int>     <int>    <int>
+#> 1  2013     1     1       517     2356
+#> 2  2013     1     2        42     2354
+#> 3  2013     1     3        32     2349
+#> 4  2013     1     4        25     2358
+#> 5  2013     1     5        14     2357
+#> 6  2013     1     6        16     2355
+#> # . with 359 more rows
+```
+
+```{r}
+not_cancelled %>% 
+  group_by(year, month, day) %>% 
+  mutate(r = min_rank(desc(dep_time))) %>% 
+  filter(r %in% range(r))
+#> # A tibble: 770 x 20
+#> # Groups:   year, month, day [365]
+#>    year month   day dep_time sched_dep_time dep_delay arr_time sched_arr_time
+#>   <int> <int> <int>    <int>          <int>     <dbl>    <int>          <int>
+#> 1  2013     1     1      517            515         2      830            819
+#> 2  2013     1     1     2356           2359        -3      425            437
+#> 3  2013     1     2       42           2359        43      518            442
+#> 4  2013     1     2     2354           2359        -5      413            437
+#> 5  2013     1     3       32           2359        33      504            442
+#> 6  2013     1     3     2349           2359       -10      434            445
+#> # . with 764 more rows, and 12 more variables: arr_delay <dbl>, carrier <chr>,
+#> #   flight <int>, tailnum <chr>, origin <chr>, dest <chr>, air_time <dbl>,
+#> #   distance <dbl>, hour <dbl>, minute <dbl>, time_hour <dttm>, r <int>
+```
+
+```{r}
+# Which destinations have the most carriers?
+not_cancelled %>% 
+  group_by(dest) %>% 
+  summarise(carriers = n_distinct(carrier)) %>% 
+  arrange(desc(carriers))
+#> `summarise()` ungrouping output (override with `.groups` argument)
+#> # A tibble: 104 x 2
+#>   dest  carriers
+#>   <chr>    <int>
+#> 1 ATL          7
+#> 2 BOS          7
+#> 3 CLT          7
+#> 4 ORD          7
+#> 5 TPA          7
+#> 6 AUS          6
+#> # . with 98 more rows
+```
+
+```{r}
+not_cancelled %>% 
+  count(dest)
+#> # A tibble: 104 x 2
+#>   dest      n
+#>   <chr> <int>
+#> 1 ABQ     254
+#> 2 ACK     264
+#> 3 ALB     418
+#> 4 ANC       8
+#> 5 ATL   16837
+#> 6 AUS    2411
+#> # . with 98 more rows
+```
+
+Misalnya, Anda dapat menggunakan ini untuk "menghitung" (menjumlahkan) jumlah total mil yang diterbangkan pesawat:
+
+```{r}
+not_cancelled %>% 
+  count(tailnum, wt = distance)
+#> # A tibble: 4,037 x 2
+#>   tailnum      n
+#>   <chr>    <dbl>
+#> 1 D942DN    3418
+#> 2 N0EGMQ  239143
+#> 3 N10156  109664
+#> 4 N102UW   25722
+#> 5 N103US   24619
+#> 6 N104UW   24616
+#> # . with 4,031 more rows
+```
+
+Hitungan dan proporsi nilai logika: jumlah (x> 10), mean (y == 0). Ketika digunakan dengan fungsi numerik, TRUE diubah menjadi 1 dan FALSE menjadi 0. Hal ini membuat sum () dan mean () sangat berguna: sum (x) memberikan jumlah TRUE dalam x, dan mean (x) memberikan proporsinya.
+
+```{r}
+# How many flights left before 5am? (these usually indicate delayed
+# flights from the previous day)
+not_cancelled %>% 
+  group_by(year, month, day) %>% 
+  summarise(n_early = sum(dep_time < 500))
+#> `summarise()` regrouping output by 'year', 'month' (override with `.groups` argument)
+#> # A tibble: 365 x 4
+#> # Groups:   year, month [12]
+#>    year month   day n_early
+#>   <int> <int> <int>   <int>
+#> 1  2013     1     1       0
+#> 2  2013     1     2       3
+#> 3  2013     1     3       4
+#> 4  2013     1     4       3
+#> 5  2013     1     5       3
+#> 6  2013     1     6       2
+#> # . with 359 more rows
+
+# What proportion of flights are delayed by more than an hour?
+not_cancelled %>% 
+  group_by(year, month, day) %>% 
+  summarise(hour_prop = mean(arr_delay > 60))
+#> `summarise()` regrouping output by 'year', 'month' (override with `.groups` argument)
+#> # A tibble: 365 x 4
+#> # Groups:   year, month [12]
+#>    year month   day hour_prop
+#>   <int> <int> <int>     <dbl>
+#> 1  2013     1     1    0.0722
+#> 2  2013     1     2    0.0851
+#> 3  2013     1     3    0.0567
+#> 4  2013     1     4    0.0396
+#> 5  2013     1     5    0.0349
+#> 6  2013     1     6    0.0470
+#> # . with 359 more rows
+```
+
+Pengelompokan berdasarkan beberapa variabel
+```{r}
+daily <- group_by(flights, year, month, day)
+(per_day   <- summarise(daily, flights = n()))
+#> `summarise()` regrouping output by 'year', 'month' (override with `.groups` argument)
+#> # A tibble: 365 x 4
+#> # Groups:   year, month [12]
+#>    year month   day flights
+#>   <int> <int> <int>   <int>
+#> 1  2013     1     1     842
+#> 2  2013     1     2     943
+#> 3  2013     1     3     914
+#> 4  2013     1     4     915
+#> 5  2013     1     5     720
+#> 6  2013     1     6     832
+#> # . with 359 more rows
+(per_month <- summarise(per_day, flights = sum(flights)))
+#> `summarise()` regrouping output by 'year' (override with `.groups` argument)
+#> # A tibble: 12 x 3
+#> # Groups:   year [1]
+#>    year month flights
+#>   <int> <int>   <int>
+#> 1  2013     1   27004
+#> 2  2013     2   24951
+#> 3  2013     3   28834
+#> 4  2013     4   28330
+#> 5  2013     5   28796
+#> 6  2013     6   28243
+#> # . with 6 more rows
+(per_year  <- summarise(per_month, flights = sum(flights)))
+#> `summarise()` ungrouping output (override with `.groups` argument)
+#> # A tibble: 1 x 2
+#>    year flights
+#>   <int>   <int>
+#> 1  2013  336776
+```
+
+Penggunaan Ungroup ()
+```{r}
+daily %>% 
+  ungroup() %>%             # no longer grouped by date
+  summarise(flights = n())  # all flights
+#> # A tibble: 1 x 1
+#>   flights
+#>     <int>
+#> 1  336776
+```
+
+Latihan
+1. Lakukan curah pendapat setidaknya 5 cara berbeda untuk menilai karakteristik penundaan yang khas dari sekelompok penerbangan. Pertimbangkan skenario berikut ini:
+
+2. Penerbangan 15 menit lebih awal 50% dari waktu, dan 15 menit terlambat 50% dari waktu.
+
+3. Penerbangan selalu terlambat 10 menit.
+
+4. Penerbangan 30 menit lebih awal 50% dari waktu, dan 30 menit terlambat 50% dari waktu.
+
+5. 99% waktu penerbangan tepat waktu. 1% dari waktu itu terlambat 2 jam.
+
+Mana yang lebih penting: penundaan kedatangan atau penundaan keberangkatan?
+
+6. Munculkan pendekatan lain yang akan memberi Anda output yang sama seperti not_cancelled%>% count (dest) dan not_cancelled%>% count (tailnum, wt = distance) (tanpa menggunakan count ()).
+
+7. Definisi kami tentang penerbangan yang dibatalkan (is.na (dep_delay) | is.na (arr_delay)) sedikit kurang optimal. Mengapa? Kolom mana yang paling penting?
+
+8. Lihat jumlah penerbangan yang dibatalkan per hari. Apakah ada polanya? Apakah proporsi penerbangan yang dibatalkan terkait dengan penundaan rata-rata?
+
+9. Operator mana yang mengalami penundaan terburuk? Tantangan: dapatkah Anda menguraikan efek dari bandara yang buruk vs. operator yang buruk? Mengapa / mengapa tidak? (Petunjuk: pikirkan tentang penerbangan%>% group_by (operator, tujuan)%>% ringkasan (n ()))
+
+10. Apa yang dilakukan oleh argumen sortir untuk menghitung (). Kapan Anda bisa menggunakannya?
+
+Mutasi yang dikelompokkan (dan filter)
+Pengelompokan paling berguna dalam hubungannya dengan summarize (), tetapi Anda juga bisa melakukan operasi praktis dengan mutate () dan filter ():
+
+Temukan anggota terburuk dari setiap kelompok:
+```{r}
+flights_sml %>% 
+  group_by(year, month, day) %>%
+  filter(rank(desc(arr_delay)) < 10)
+#> # A tibble: 3,306 x 7
+#> # Groups:   year, month, day [365]
+#>    year month   day dep_delay arr_delay distance air_time
+#>   <int> <int> <int>     <dbl>     <dbl>    <dbl>    <dbl>
+#> 1  2013     1     1       853       851      184       41
+#> 2  2013     1     1       290       338     1134      213
+#> 3  2013     1     1       260       263      266       46
+#> 4  2013     1     1       157       174      213       60
+#> 5  2013     1     1       216       222      708      121
+#> 6  2013     1     1       255       250      589      115
+#> # . with 3,300 more rows
+```
+
+Temukan semua grup yang lebih besar dari ambang batas:
+```{r}
+popular_dests <- flights %>% 
+  group_by(dest) %>% 
+  filter(n() > 365)
+popular_dests
+#> # A tibble: 332,577 x 19
+#> # Groups:   dest [77]
+#>    year month   day dep_time sched_dep_time dep_delay arr_time sched_arr_time
+#>   <int> <int> <int>    <int>          <int>     <dbl>    <int>          <int>
+#> 1  2013     1     1      517            515         2      830            819
+#> 2  2013     1     1      533            529         4      850            830
+#> 3  2013     1     1      542            540         2      923            850
+#> 4  2013     1     1      544            545        -1     1004           1022
+#> 5  2013     1     1      554            600        -6      812            837
+#> 6  2013     1     1      554            558        -4      740            728
+#> # . with 332,571 more rows, and 11 more variables: arr_delay <dbl>,
+#> #   carrier <chr>, flight <int>, tailnum <chr>, origin <chr>, dest <chr>,
+#> #   air_time <dbl>, distance <dbl>, hour <dbl>, minute <dbl>, time_hour <dttm>
+```
+
+Standarisasi untuk menghitung metrik grup:
+```{r}
+popular_dests %>% 
+  filter(arr_delay > 0) %>% 
+  mutate(prop_delay = arr_delay / sum(arr_delay)) %>% 
+  select(year:day, dest, arr_delay, prop_delay)
+#> # A tibble: 131,106 x 6
+#> # Groups:   dest [77]
+#>    year month   day dest  arr_delay prop_delay
+#>   <int> <int> <int> <chr>     <dbl>      <dbl>
+#> 1  2013     1     1 IAH          11  0.000111 
+#> 2  2013     1     1 IAH          20  0.000201 
+#> 3  2013     1     1 MIA          33  0.000235 
+#> 4  2013     1     1 ORD          12  0.0000424
+#> 5  2013     1     1 FLL          19  0.0000938
+#> 6  2013     1     1 ORD           8  0.0000283
+#> # . with 131,100 more rows
+```
+
+Latihan
+1. Lihat kembali daftar fungsi mutasi dan pemfilteran yang berguna. Jelaskan bagaimana setiap operasi berubah saat Anda menggabungkannya dengan pengelompokan.
+
+2. Pesawat mana (tailnum) yang memiliki rekor tepat waktu terburuk?
+
+3. Jam berapa Anda harus terbang jika Anda ingin menghindari penundaan sebanyak mungkin?
+
+4. Untuk setiap tujuan, hitung total menit penundaan. Untuk setiap penerbangan, hitung proporsi penundaan total untuk tujuannya.
+
+5. Penundaan biasanya berkorelasi sementara: bahkan setelah masalah yang menyebabkan penundaan awal diselesaikan, penerbangan selanjutnya ditunda untuk memungkinkan penerbangan lebih awal berangkat. Menggunakan lag (), jelajahi bagaimana penundaan penerbangan terkait dengan penundaan penerbangan sebelumnya.
+
+6. Lihat setiap tujuan. Dapatkah Anda menemukan penerbangan yang mencurigakan dengan cepat? (mis. penerbangan yang menunjukkan potensi kesalahan entri data). Hitung waktu udara suatu penerbangan relatif terhadap penerbangan terpendek ke tujuan itu. Penerbangan mana yang paling terlambat di udara?
+
+7. Temukan semua tujuan yang diterbangkan oleh setidaknya dua operator. Gunakan informasi itu untuk menentukan peringkat operator.
+
+8. Untuk setiap pesawat, hitung jumlah penerbangan sebelum penundaan pertama lebih dari 1 jam.
+
+
+
+
+
+
+
